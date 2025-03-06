@@ -4,32 +4,51 @@ import tkinter as tk
 from tkinter import scrolledtext
 from transformers import pipeline
 from fpdf import FPDF
-import os  # Add this to check where the file is saved
+import threading
+import os
 
-# Initialize text-to-speech engine
+# Initialize speech recognition, text-to-speech, and summarization
 engine = pyttsx3.init()
 recognizer = sr.Recognizer()
 transcription = ""
-
-# Load summarization model
+listening = False  # Flag to track listening state
 summarizer = pipeline("summarization")
 
-def start_transcription():
-    global transcription
+def listen_continuous():
+    """Continuously listens and transcribes speech until stopped."""
+    global listening, transcription
     with sr.Microphone() as source:
         recognizer.adjust_for_ambient_noise(source)
-        print("Listening...")
-        try:
-            audio = recognizer.listen(source, timeout=10)
-            text = recognizer.recognize_google(audio)
-            transcription += text + "\n"
-            text_area.insert(tk.END, text + "\n")
-        except sr.UnknownValueError:
-            text_area.insert(tk.END, "Could not understand audio\n")
-        except sr.RequestError:
-            text_area.insert(tk.END, "Speech recognition service error\n")
+        text_area.insert(tk.END, "Listening...\n")
+        while listening:
+            try:
+                audio = recognizer.listen(source, timeout=None)
+                text = recognizer.recognize_google(audio)
+                transcription += text + "\n"
+                text_area.insert(tk.END, text + "\n")
+                text_area.yview(tk.END)  # Auto-scroll
+            except sr.UnknownValueError:
+                text_area.insert(tk.END, "Could not understand audio\n")
+            except sr.RequestError:
+                text_area.insert(tk.END, "Speech recognition service error\n")
+
+def start_transcription():
+    """Starts continuous speech recognition in a separate thread."""
+    global listening
+    if not listening:
+        listening = True
+        threading.Thread(target=listen_continuous, daemon=True).start()
+    else:
+        text_area.insert(tk.END, "Already listening...\n")
+
+def stop_transcription():
+    """Stops the speech recognition loop."""
+    global listening
+    listening = False
+    text_area.insert(tk.END, "Transcription stopped.\n")
 
 def summarize_text():
+    """Summarizes the transcribed text."""
     global transcription
     if transcription:
         summary = summarizer(transcription, max_length=100, min_length=30, do_sample=False)
@@ -39,23 +58,22 @@ def summarize_text():
     else:
         text_area.insert(tk.END, "No transcription available to summarize.\n")
 
-# ✅ Replace your old save_as_pdf() function with this updated version
 def save_as_pdf():
+    """Saves transcribed text as a PDF."""
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
-    
-    text_content = text_area.get("1.0", tk.END).strip()  # Get text and remove trailing spaces
+
+    text_content = text_area.get("1.0", tk.END).strip()
     if not text_content:
         text_area.insert(tk.END, "No text to save!\n")
         return
-    
+
     pdf.multi_cell(0, 10, text_content)
-    
-    save_path = os.path.join(os.getcwd(), "lecture_notes.pdf")  # Save in current working directory
+
+    save_path = os.path.join(os.getcwd(), "lecture_notes.pdf")
     pdf.output(save_path)
-    
-    print(f"✅ PDF saved at: {save_path}")  # Print location in console
+
     text_area.insert(tk.END, "✅ Notes saved as PDF\n")
 
 # GUI Setup
@@ -63,16 +81,28 @@ root = tk.Tk()
 root.title("Live Speech-to-Text Summarizer")
 root.geometry("600x400")
 
+# Text area
 text_area = scrolledtext.ScrolledText(root, width=70, height=15)
-text_area.pack()
+text_area.pack(pady=10)
 
-start_button = tk.Button(root, text="Start Transcription", command=start_transcription)
-start_button.pack()
+# Button frame for Start & Stop
+button_frame1 = tk.Frame(root)
+button_frame1.pack()
 
-summarize_button = tk.Button(root, text="Summarize", command=summarize_text)
-summarize_button.pack()
+start_button = tk.Button(button_frame1, text="▶ Start Transcription", command=start_transcription, width=20, bg="green", fg="white")
+start_button.grid(row=0, column=0, padx=10, pady=5)
 
-save_button = tk.Button(root, text="Save as PDF", command=save_as_pdf)  # Calls the updated function
-save_button.pack()
+stop_button = tk.Button(button_frame1, text="⏹ Stop Transcription", command=stop_transcription, width=20, bg="red", fg="white")
+stop_button.grid(row=0, column=1, padx=10, pady=5)
+
+# Button frame for Summarize & Save
+button_frame2 = tk.Frame(root)
+button_frame2.pack()
+
+summarize_button = tk.Button(button_frame2, text="📝 Summarize", command=summarize_text, width=20, bg="blue", fg="white")
+summarize_button.grid(row=1, column=0, padx=10, pady=5)
+
+save_button = tk.Button(button_frame2, text="💾 Save as PDF", command=save_as_pdf, width=20, bg="purple", fg="white")
+save_button.grid(row=1, column=1, padx=10, pady=5)
 
 root.mainloop()

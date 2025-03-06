@@ -1,7 +1,6 @@
 certifi==2025.1.31
 charset-normalizer==3.4.1
 colorama==0.4.6
-comtypes==1.4.10
 filelock==3.17.0
 fpdf==1.7.2
 fsspec==2025.2.0
@@ -14,10 +13,8 @@ networkx==3.4.2
 numpy==2.2.3
 packaging==24.2
 pillow==11.1.0
-PyAudio==0.2.14
-pypiwin32==223
+soundfile
 pyttsx3==2.98
-pywin32==308
 PyYAML==6.0.2
 regex==2024.11.6
 requests==2.32.3

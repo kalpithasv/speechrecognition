@@ -1,3 +1,4 @@
+import os
 from flask import Flask, request, jsonify
 import speech_recognition as sr
 
@@ -27,4 +28,5 @@ def recognize_speech():
         return jsonify({"error": "API unavailable"}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.getenv("PORT", 5000))  # Use Render's assigned port
+    app.run(host="0.0.0.0", port=port)

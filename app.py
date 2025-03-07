@@ -1,12 +1,13 @@
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, redirect
 import speech_recognition as sr
 
 app = Flask(__name__)
 
+# Redirect '/' to the GUI
 @app.route('/')
 def home():
-    return "Speech Recognition API is running!"
+    return redirect("https://speech-recognition-uk9k.onrender.com/gui", code=302) 
 
 @app.route('/recognize', methods=['POST'])
 def recognize_speech():
@@ -28,5 +29,5 @@ def recognize_speech():
         return jsonify({"error": "API unavailable"}), 500
 
 if __name__ == '__main__':
-    port = int(os.getenv("PORT", 5000))  # Use Render's assigned port
+    port = int(os.getenv("PORT", 5000))  
     app.run(host="0.0.0.0", port=port)
